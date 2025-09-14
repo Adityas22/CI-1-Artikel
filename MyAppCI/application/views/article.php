@@ -50,6 +50,7 @@
 <div class="container px-4 px-lg-5">
     <div class="row gx-4 gx-lg-5 justify-content-center">
         <div class="col-md-10 col-lg-8 col-xl-7">
+            <?php echo$this->session->flashdata('message') ?>
             <form method="get" action="<?php echo site_url('blog/search'); ?>">
                 <input type="text" name="find" placeholder="Cari judul...">
                 <button type="submit">Cari</button>
@@ -60,8 +61,10 @@
                 <a href="<?php echo site_url('blog/detail/'.$blog['id']); ?>">
                     <h2 class="post-title"><?php echo $blog['title']; ?></h2>
                 </a>
+                Posted by <?php echo $blog['date']; ?>
+                <?php if(isset($_SESSION['username'])){ ?>
                 <p class="post-meta">
-                    Posted by <?php echo $blog['date']; ?>
+
                     <a href="<?php echo site_url('blog/updateForm/'.$blog['id']);?>"
                         class="btn btn-sm btn-warning me-2">
                         Edit
@@ -72,6 +75,7 @@
                         Delete
                     </a>
                 </p>
+                <?php } ?>
             </div>
             <h4 class="post-subtitle" style="text-align: justify;"> <?php echo $blog['content']; ?></h4>
 

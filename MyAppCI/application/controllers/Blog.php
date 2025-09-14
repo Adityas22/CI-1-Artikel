@@ -12,6 +12,7 @@
  * @property CI_Upload $upload
  *  //conig autoload
  * @property CI_FormValidation form_validation
+ * @property CI_Session session
  */
 
 class Blog extends CI_Controller{
@@ -20,6 +21,7 @@ class Blog extends CI_Controller{
     {
          parent::__construct();
          $this->load->model('Blog_model');
+         $this->load->library('session');
 
         //  pindah ke auload karena dipakai menerus db
         //  $this->load->database();
@@ -30,7 +32,8 @@ class Blog extends CI_Controller{
     }
     public function index ($page = 0)
     {
-        $page = ($page === null) ? 0 : $page; // pastikan $page bukan nul
+        // mengatur pagenation diatur id system pagenation baris 256 pada if 
+        // $page = ($page === null) ? 0 : $page; // pastikan $page bukan nul
 
          // load library pagination
         $this->load->library('pagination');
@@ -78,11 +81,18 @@ class Blog extends CI_Controller{
             // $this->form_validation->set_rules('title', 'Judul', 'required');
             $this->form_validation->set_rules('title', 'Judul', 'required|min_length[5]|max_length[20]');
             $this->form_validation->set_rules('content', 'Konten', 'required|min_length[10]|max_length[200]');
-            $this->form_validation->set_rules('cover', 'cover', 'required');
+            // $this->form_validation->set_rules('cover', 'cover', 'callback_file_check');
 
             if ($this->form_validation->run()===TRUE) {
                 $data['title'] = $this->input->post('title');
                 $data['content'] = $this->input->post('content'); 
+
+                  // cek file cover dulu
+                if (empty($_FILES['cover']['name'])) {
+                    $this->session->set_flashdata("message", "Cover wajib diupload");
+                    redirect('/blog/addForm'); // balik ke form
+                }
+
                 
                 $config['upload_path']          = './uploads/';
                 $config['allowed_types']        = 'jpg|png';
@@ -94,15 +104,22 @@ class Blog extends CI_Controller{
 
                 if ( ! $this->upload->do_upload('cover'))
                 {
-                        echo $this->upload->display_errors();
+                    echo $this->upload->display_errors();
 
                 }
                 else
                 {
                     $data['cover'] =  $this->upload->data()['file_name'];
                 }
-                $this->Blog_model->insertBlog( $data);
-                redirect('/blog/index/0');
+                $id = $this->Blog_model->insertBlog( $data);
+                if ($id) {
+                    $this->session->set_flashdata('message', '<div class="alert alert-success">Data berhasil disimpan</div>');
+                    redirect('/blog/index/');
+                }else {
+                    $this->session->set_flashdata('message', '<div class="alert alert-warning">Data gagal disimpan</div>');
+                    redirect('/blog/addForm');
+                }
+                
             }
         }
         $this->load->view('form_add');
@@ -137,11 +154,12 @@ class Blog extends CI_Controller{
             
 			$id	=$this->Blog_model->updateBlog($id,$post);
 			if($id){
-                echo "Data berhasil disimpan";
-                redirect('/blog/index/0');
+                $this->session->set_flashdata('message', '<div class="alert alert-success">Data berhasil disimpan</div>');
+                redirect('/blog/index/');
             }
 			else{
-                echo "Data gagal disimpan";
+               $this->session->set_flashdata('message', '<div class="alert alert-warning">Data gagal disimpan</div>');
+               redirect('/blog/updateForm');
             }
 		}
 		$this->load->view('form_edit',$data);
@@ -149,17 +167,26 @@ class Blog extends CI_Controller{
 
     public function delete($id)
     {
-        $this->Blog_model->deleteBlog($id); 
         // ambil page dari query string
         $page = $this->input->get('page') ?? 0; // default 0 kalau null
+        $result	= $this->Blog_model->deleteBlog($id); 
+		if($result)
+		{
+		$this->session->set_flashdata('message', '<div class="alert alert-success">Data berhasil dihapus</div>');
+		}
+		else
+		{
+		$this->session->set_flashdata('message', '<div class="alert alert-warning">Data gagal dihapus</div>');
+		}
 
-        redirect('/blog/index/'.$page);
+        redirect('/blog/index/');
     }
 
     public function search()
     {
         $filter = $this->input->get('find');
         $data['blogs'] = $this->Blog_model->searchBlog($filter);
+        $data['pagination'] = '';
         $this->load->view('article', $data);
         
     }
@@ -169,6 +196,33 @@ class Blog extends CI_Controller{
     {
        
         $this->load->view('aboutMe');
+    }
+
+    function login()
+    {
+        if($this->input->post())
+        {
+            $username	= $this->input->post('username');
+            $password	= $this->input->post('password');
+            if($username=='admin' && $password=='admin')
+            {
+                $_SESSION['username']='admin';
+                $this->session->set_flashdata('message','<div class="alert alert-warning">Selamat Datang!</div>');
+                redirect('/');
+            }
+            else
+            {
+                $this->session->set_flashdata('message','<div class="alert alert-success">Username atau Password Anda tidak valid!</div>');
+                redirect('blog/login');
+            }
+        }
+        $this->load->view('login'); 
+    }
+
+    public function logout()
+    {
+        $this->session->sess_destroy();
+        redirect('blog/login');
     }
 }
 ?>

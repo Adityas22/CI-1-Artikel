@@ -11,7 +11,7 @@
                         <div class="card-header bg-primary text-white text-center">
                             <h4 class="mb-0">Tambah Artikel</h4>
                         </div>
-                        <div class="alert alert-danger">
+                        <div>
                             <?php echo validation_errors();  ?>
                         </div>
                         <div class="card-body bg-light">
